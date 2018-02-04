@@ -9,3 +9,4 @@ class Article(scrapy.Item):
     date = scrapy.Field()
     content = scrapy.Field()
     comments = scrapy.Field()
+    tags = scrapy.Field()
