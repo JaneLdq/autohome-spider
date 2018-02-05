@@ -11,11 +11,14 @@ import re
 class ArticlesSpider(scrapy.Spider):
     name = "articles"
 
-    def start_requests(self, keyword='电动车', *args, **kwargs):
-        super(ArticlesSpider, self).__init__(*args, **kwargs)
-        keyword = quote(keyword.encode('gb2312'))
-        url = 'https://sou.autohome.com.cn/wenzhang?q=%s' % keyword
-        yield scrapy.Request(url=url, callback=self.parse_search_page)
+    def start_requests(self):
+        if not self.words:
+            raise ValueError("No search keyword given.")
+        keywords = self.words.split(',')
+        for keyword in keywords:
+            keyword = quote(keyword.encode('gb2312'))
+            url = 'https://sou.autohome.com.cn/wenzhang?q=%s' % keyword
+            yield scrapy.Request(url=url, callback=self.parse_search_page)
 
     def parse_search_page(self, response):
         # crawl all the articles in current page
