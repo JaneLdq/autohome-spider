@@ -10,3 +10,14 @@ class Article(scrapy.Item):
     content = scrapy.Field()
     comments = scrapy.Field()
     tags = scrapy.Field()
+
+class Feedback(scrapy.Item):
+    # car series id
+    # series_id = scrapy.Field()
+    # car series name
+    series_name = scrapy.Field()
+    # a list of purposes of use
+    purposes = scrapy.Field()
+    title = scrapy.Field()
+    # [{date, content}]
+    content_list = scrapy.Field()

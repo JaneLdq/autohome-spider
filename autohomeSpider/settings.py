@@ -65,7 +65,8 @@ DEFAULT_REQUEST_HEADERS = {
 # Configure item pipelines
 # See https://doc.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-   'autohomeSpider.pipelines.MongoPipeline': 300,
+   'autohomeSpider.pipelines.ArticleMongoPipeline': 300,
+   'autohomeSpider.pipelines.FeedbackMongoPipeline': 300,
    # 'autohomeSpider.pipelines.JsonWriterPipeline': 300,
 }
 
@@ -93,5 +94,6 @@ ITEM_PIPELINES = {
 LOG_LEVEL = 'INFO'
 # LOG_FILE = 'log.txt'
 
-MONGO_URI = 'localhost'
+# MONGO_URI = '10.58.0.189:27017'
+MONGO_URI = 'localhost:27017'
 MONGO_DATABASE = 'autohome'

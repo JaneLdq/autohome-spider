@@ -11,6 +11,12 @@ import re
 class ArticlesSpider(scrapy.Spider):
     name = "articles"
 
+    custom_settings = {
+        'ITEM_PIPELINES': {
+            'autohomeSpider.pipelines.ArticleMongoPipeline': 300
+        }
+    }
+
     def start_requests(self):
         if not self.words:
             raise ValueError("No search keyword given.")
