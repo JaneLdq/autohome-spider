@@ -2,8 +2,8 @@
 
 from autohomeSpider.items import Article
 from requests.exceptions import RequestException
-from urllib.request import urlopen
-from urllib.parse import quote
+from urllib2 import urlopen
+from urllib2 import quote
 import json
 import scrapy
 import re

@@ -65,7 +65,7 @@ DEFAULT_REQUEST_HEADERS = {
 # Configure item pipelines
 # See https://doc.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-   'autohomeSpider.pipelines.ArticleMongoPipeline': 300,
+   # 'autohomeSpider.pipelines.ArticleMongoPipeline': 300,
    'autohomeSpider.pipelines.FeedbackMongoPipeline': 300,
    # 'autohomeSpider.pipelines.JsonWriterPipeline': 300,
 }

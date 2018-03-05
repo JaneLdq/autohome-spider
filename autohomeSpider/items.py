@@ -20,4 +20,4 @@ class Feedback(scrapy.Item):
     purposes = scrapy.Field()
     title = scrapy.Field()
     # [{date, content}]
-    content_list = scrapy.Field()
+    items = scrapy.Field()
