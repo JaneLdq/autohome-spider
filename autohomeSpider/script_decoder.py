@@ -27,10 +27,20 @@ class ScriptDecoder(object):
         end = re.search('<!--@athm_js@-->', content).span()[0]
         comment = content[start: end].decode("utf-8")
         # 获取混淆的js代码
-        soup = BeautifulSoup(content, "lxml")
+        soup = BeautifulSoup(content, "lxml", from_encoding='utf-8')
         h_js = soup.find('script')
         # 将标题和混淆的js存入一个列表
         return [title, comment, h_js]
+
+    def  get_add_comment_js(self, content):
+        start = re.search('<!--@athm_BASE64@-->', content).span()[1]
+        end = re.search('<!--@athm_js@-->', content).span()[0]
+        comment = content[start: end].decode("utf-8")
+        # 获取混淆的js代码
+        soup = BeautifulSoup(content, "lxml")
+        h_js = soup.find('script')
+        # 将标题和混淆的js存入一个列表
+        return [comment, h_js]
 
     def put_js(self, js):
         """组装js代码"""
@@ -75,12 +85,31 @@ class ScriptDecoder(object):
                 list_index.append(index)
         return [list_num16, list_index]
 
-    def replace(self, item, font_decoder):
+    def replace_comment(self, item, font_decoder):
         """用16进制数字替换掉段落中的span"""
         obj = self.get_title_comment_js(item)
         title = obj[0]                   #获取标题
         con = obj[1]                     #获取加密后段落
         js = self.put_js(obj[2])         #获取js后重新组装js
+        con = self.replace(con, js, font_decoder)
+        return {title: str(con)}
+
+    def replace_add_comment(self, item, font):
+        obj = self.get_add_comment_js(item)
+        content = obj[0]
+        js = self.put_js(obj[1])
+        content = self.replace(content, js, font)
+        items = str(content).split('【')[1:]
+        result = {}
+        for item in items:
+            title =  item.split("】")[0]
+            text = item.split("】")[1].replace('<br>', '')
+            result.update({
+                title: text
+            })
+        return result
+
+    def replace(self, con, js, font_decoder):
         list_num16_index = self.run_js(js)             #利用v8运行js,获得16进制数字和对应关系
         list_num16 = list_num16_index[0]
         list_num16 = list_num16[0].split(",")
@@ -95,13 +124,17 @@ class ScriptDecoder(object):
             # decode = DecodeFontFile()
             font = font_decoder.get_font(glyph)
             con = con.replace(tag_span, font)
-        return {title: str(con)}
+        return con
 
     def decode(self, content, font):
         # 传入完成口碑加密内容, 返回按标题分割的片断列表【A】，【B】，【C】
-        items = self.split(content)
-        output = {}
-        for item in items:
-            text = self.replace(item, font)
-            output.update(text)
-        return output
+        # check if is added comment
+        if re.search('add-dl-text', content):
+            return self.replace_add_comment(content, font)
+        else:
+            items = self.split(content)
+            output = {}
+            for item in items:
+                text = self.replace_comment(item, font)
+                output.update(text)
+            return output

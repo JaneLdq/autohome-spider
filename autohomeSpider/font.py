@@ -4,7 +4,10 @@ from fontTools.ttLib import TTFont
 import requests
 import re
 import os
+import sys
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
+reload(sys)
+sys.setdefaultencoding('utf8')
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
@@ -17,22 +20,18 @@ list_font = [ ' ', '一', '七', '三', '上', '下', '不', '中', '档', '比'
 class Font(object):
 
     def __init__(self, url):
-        self.file_path = "font.ttf"
-        self.url = url
-        self.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36"
-        }
         ttf = requests.get("http:" + url, stream=True)
-        with open(self.file_path, "wb") as pdf:
+        file_path = './fonts/' + re.search('/([\w\d-]+)..ttf', url).group(1) + '.ttf'
+        with open(file_path, "wb+") as pdf:
             for chunk in ttf.iter_content(chunk_size=1024):
                 if chunk:
                     pdf.write(chunk)
+        self.ttf = TTFont(file_path)
 
     # 创建 self.font 属性
     def get_glyph_id(self, glyph):
-        ttf = TTFont(self.file_path)
         # gly_list = ttf.getGlyphOrder()  # 获取 GlyphOrder 字段的值
-        index = ttf.getGlyphID(glyph)
+        index = self.ttf.getGlyphID(glyph)
         # os.remove(self.file_path)
         return index
 
