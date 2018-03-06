@@ -4,11 +4,13 @@ from autohomeSpider.items import Feedback
 from urllib2 import urlopen
 from bs4 import BeautifulSoup
 from autohomeSpider.font import Font
-from autohomeSpider.script_decoder import ScriptDecoder
+from autohomeSpider.script_decoder import *
 import json
 import scrapy
 import re
 import ssl
+
+# script_decoder = ScriptDecoder()
 
 class FeedbacksSpider(scrapy.Spider):
     name = "feedbacks"
@@ -43,7 +45,6 @@ class FeedbacksSpider(scrapy.Spider):
         car_list = json.load(urlopen(url, context=ssl._create_unverified_context()))
         for car in car_list['result']:
             link = 'https://k.autohome.com.cn/' + str(car['SeriesId'])
-            self.logger.info("Crawling feedback of car series: %s" % link)
             yield scrapy.Request(url=link, headers=self.headers, callback=self.parse_feedback_list, meta={
                 'series_id': car['SeriesId']
             })
@@ -60,6 +61,7 @@ class FeedbacksSpider(scrapy.Spider):
         # test feedback detail
         # link1 = 'https://k.autohome.com.cn/detail/view_01c7reaqhs64wk4dsr70w00000.html?st=2&piap=0|835|0|0|1|0|0|0|0|0|1'
         # link = 'https://k.autohome.com.cn/detail/view_01btxq86n964vk8csp60r00000.html?st=1&piap=0|3884|0|0|1|0|0|0|1|0|1'
+        # link = 'https://k.autohome.com.cn/detail/view_01bqnbxs8864v3gcsm64v00000.html?st=13&piap=0|2805|0|0|1|0|0|0|0|0|1'
         # self.logger.info("Crawling feedback of detail: %s" % link)
         # test_meta = {
         #      'dont_redirect': True,
@@ -69,6 +71,7 @@ class FeedbacksSpider(scrapy.Spider):
         # yield scrapy.Request(url=link, headers=self.headers, meta=test_meta, callback=self.parse_feedback_page)
 
     def parse_feedback_list(self, response):
+        self.logger.info("Crawling feedback of car series: %s" % response.url)
         # redirect with token
         if response.status == 302:
             redirect_url = str(response.headers.get('Location'))
@@ -78,7 +81,6 @@ class FeedbacksSpider(scrapy.Spider):
             # get the feedback list for the specific car series
             links = response.xpath("//div[@class='mouthcon']//div[contains(@class, 'title-name')]/a/@href").extract()
             for link in links:
-                self.logger.info("Crawling feedback detail page: %s" % link)
                 yield response.follow(url=link, headers=self.headers, callback=self.parse_feedback_page, meta=response.meta)
 
             # go to next page
@@ -87,6 +89,7 @@ class FeedbacksSpider(scrapy.Spider):
                 yield response.follow(url=next_page, callback=self.parse_feedback_list)
 
     def parse_feedback_page(self, response):
+        self.logger.info("Crawling feedback detail page: %s" % response.url)
         if response.status == 302:
             redirect_url = str(response.headers.get('Location'))
             yield scrapy.Request(url=redirect_url, dont_filter=True, callback=self.parse_feedback_page, meta={
@@ -103,12 +106,11 @@ class FeedbacksSpider(scrapy.Spider):
             regex = re.compile("url\('(//.*.ttf)'\) format\('woff'\)")
             font_url = re.findall(regex, response.body)[0]
             font = Font(font_url)
-            script_decoder = ScriptDecoder()
 
             # extract text from each <div class='mouth-item'> block
             origin_content_list = response.xpath("//div[@class='mouthcon-cont-right']/div[@class='mouth-main']/div[@class='mouth-item']/div[@class='text-con']").extract()
             content_list = []
             for item in origin_content_list:
-                content_list.append(script_decoder.decode(item, font))
+                content_list.append(decode(item, font))
             feedback['items'] = content_list
             yield feedback

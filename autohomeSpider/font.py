@@ -4,10 +4,7 @@ from fontTools.ttLib import TTFont
 import requests
 import re
 import os
-import sys
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
-reload(sys)
-sys.setdefaultencoding('utf8')
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
