@@ -7,9 +7,15 @@ from document import Global
 # from decode_fontfile import DecodeFontFile
 from font import Font
 import sys
+import logging
 
 reload(sys)
 sys.setdefaultencoding('utf8')
+
+logger = logging.getLogger(__name__)
+
+with PyV8.JSLocker():
+    ctx = PyV8.JSContext(Global())
 
 # class ScriptDecoder(object):
 """传入口碑的所有内容, 返回正常文本信息"""
@@ -75,14 +81,18 @@ def run_js( js):
     glob = Global()
     list_num16 = []
     list_index = []
-    with PyV8.JSContext(glob) as ctext:
-        ctext.eval(js)
-        vars = ctext.locals
+    with PyV8.JSLocker():
+        ctx.enter()
+        ctx.eval(js)
+        vars = ctx.locals
         js_array = vars.result
         for num16 in js_array[0]:
             list_num16.append(num16)
         for index in js_array[1]:
             list_index.append(index)
+        PyV8.JSUnlocker()
+        ctx.leave()
+        PyV8.JSEngine.collect()
     return [list_num16, list_index]
 
 # @staticmethod

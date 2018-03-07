@@ -25,7 +25,6 @@ class FeedbacksSpider(scrapy.Spider):
         'host': "k.autohome.com.cn",
         'connection': "keep-alive",
         'upgrade-insecure-requests': "1",
-        'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.186 Safari/537.36",
         'accept': "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
         'accept-encoding': "gzip, deflate, br",
         'accept-language': "en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7,zh-TW;q=0.6",
@@ -61,7 +60,7 @@ class FeedbacksSpider(scrapy.Spider):
         # test feedback detail
         # link1 = 'https://k.autohome.com.cn/detail/view_01c7reaqhs64wk4dsr70w00000.html?st=2&piap=0|835|0|0|1|0|0|0|0|0|1'
         # link = 'https://k.autohome.com.cn/detail/view_01btxq86n964vk8csp60r00000.html?st=1&piap=0|3884|0|0|1|0|0|0|1|0|1'
-        # link = 'https://k.autohome.com.cn/detail/view_01bqnbxs8864v3gcsm64v00000.html?st=13&piap=0|2805|0|0|1|0|0|0|0|0|1'
+        # link = 'https://k.autohome.com.cn/detail/view_01bj2ec5dn64v30d9r64rg0000.html?st=17&piap=0|4317|0|0|1|0|0|0|0|0|1'
         # self.logger.info("Crawling feedback of detail: %s" % link)
         # test_meta = {
         #      'dont_redirect': True,
