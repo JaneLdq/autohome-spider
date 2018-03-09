@@ -13,7 +13,8 @@ class Article(scrapy.Item):
 
 class Feedback(scrapy.Item):
     # car series id
-    # series_id = scrapy.Field()
+    page_id = scrapy.Field()
+    series_id = scrapy.Field()
     # car series name
     series_name = scrapy.Field()
     # a list of purposes of use

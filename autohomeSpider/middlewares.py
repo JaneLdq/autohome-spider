@@ -6,9 +6,13 @@
 # https://doc.scrapy.org/en/latest/topics/spider-middleware.html
 
 from scrapy import signals
+from pymongo import MongoClient
 import random
 import base64
 from . import settings
+
+client = MongoClient('10.58.0.189', 27017)
+db = client.autohome
 
 
 class AutohomespiderSpiderMiddleware(object):
@@ -116,5 +120,4 @@ class RandomUserAgent(object):
         return cls(crawler.settings.getlist('USER_AGENTS'))
 
     def process_request(self, request, spider):
-        #print "**************************" + random.choice(self.agents)
         request.headers.setdefault('User-Agent', random.choice(self.agents))
