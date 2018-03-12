@@ -71,5 +71,5 @@ class FeedbackMongoPipeline(object):
         self.client.close()
 
     def process_item(self, item, spider):
-        self.db[self.collection_name].insert_one(dict(item))
+        self.db[self.collection_name].update({'page_id': item['page_id']}, dict(item), upsert=True)
         return item

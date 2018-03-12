@@ -18,6 +18,8 @@ db = client.autohome
 
 detail_page_regex = re.compile("//k.autohome.com.cn/detail/view_([\d\w]+).html")
 
+verify_page_regex = re.compile("http://safety.autohome.com.cn/userverify/")
+index_regex = re.compile("backurl=//k.autohome.com.cn/\d+/index_(\d+).html")
 
 class FeedbacksSpider(scrapy.Spider):
     name = "feedbacks"
@@ -44,10 +46,17 @@ class FeedbacksSpider(scrapy.Spider):
     }
 
     def start_requests(self, level=None):
-        series_ids = db.series_id.find({})
+
+        index_series_ids = db.series_id.find({"index":{"$exists": True}})
+        for doc in index_series_ids:
+            link = link = 'https://k.autohome.com.cn/' + str(doc['id']) + '/index_' + doc['index'] + '.html'
+            yield scrapy.Request(url=link, headers=self.headers, dont_filter=True, callback=self.parse_feedback_list, meta={'series_id': doc['id']})
+
+        series_ids = db.series_id.find({"index":{"$exists": False}})
         for doc in series_ids:
             link = link = 'https://k.autohome.com.cn/' + str(doc['id'])
             yield scrapy.Request(url=link, headers=self.headers, dont_filter=True, callback=self.parse_feedback_list, meta={'series_id': doc['id']})
+
 
         failed_detail_ids = db.failed_fb_detail_pages.find({})
         for doc in failed_detail_ids:
@@ -57,20 +66,25 @@ class FeedbacksSpider(scrapy.Spider):
 
 
     def parse_feedback_list(self, response):
-        self.logger.info("Crawling feedback of car series: %s" % response.meta['series_id'])
-
-        # get the feedback list for the specific car series
-        links = response.xpath("//div[@class='mouthcon']//div[contains(@class, 'title-name')]/a/@href").extract()
-        for link in links:
-            yield response.follow(url=link, headers=self.headers, dont_filter=True, callback=self.parse_feedback_page, errback=self.errback_httpbin, meta=response.meta)
-
-        # go to next page
-        next_page = response.xpath("//a[@class='page-item-next']/@href").extract_first()
-        if next_page is not None:
-            yield response.follow(url=next_page, callback=self.parse_feedback_list, dont_filter=True, meta=response.meta)
+        # if this crawled page is redirected to user verify page and get response 200
+        if re.search(verify_page_regex, response.url):
+            index = re.search(index_regex, response.url).group(1)
+            db.series_id.find_one_and_update({'id': response.meta['series_id']}, {'$set': {'index': index}})
         else:
-            # if successfully crawled the whole list page of one series, then delete the series id from db
-            db.series_id.find_one_and_delete({'id': response.meta['series_id']})
+            self.logger.info("Crawling feedback of car series: %s" % response.meta['series_id'])
+
+            # get the feedback list for the specific car series
+            links = response.xpath("//div[@class='mouthcon']//div[contains(@class, 'title-name')]/a/@href").extract()
+            for link in links:
+                yield response.follow(url=link, headers=self.headers, dont_filter=True, callback=self.parse_feedback_page, errback=self.errback_httpbin, meta=response.meta)
+
+            # go to next page
+            next_page = response.xpath("//a[@class='page-item-next']/@href").extract_first()
+            if next_page is not None:
+                yield response.follow(url=next_page, callback=self.parse_feedback_list, dont_filter=True, meta=response.meta)
+            else:
+                # if successfully crawled the whole list page of one series, then delete the series id from db
+                db.series_id.find_one_and_delete({'id': response.meta['series_id']})
 
 
     def parse_feedback_page(self, response):
