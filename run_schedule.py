@@ -5,10 +5,10 @@ import time
 
 def run_spider():
     process = CrawlerProcess(get_project_settings())
-    process.crawl("feedbacks")
+    process.crawl("new_feedbacks")
     process.start()
 
-schedule.every(6).hours.do(run_spider)
+schedule.every(8).hours.do(run_spider)
 
 
 while True:
