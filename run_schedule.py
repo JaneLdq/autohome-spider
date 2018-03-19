@@ -8,7 +8,7 @@ def run_spider():
     process.crawl("new_feedbacks")
     process.start()
 
-schedule.every(8).hours.do(run_spider)
+schedule.every().hour.do(run_spider)
 
 
 while True:

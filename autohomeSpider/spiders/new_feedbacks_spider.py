@@ -48,18 +48,12 @@ class NewFeedbacksSpider(scrapy.Spider):
 
     def start_requests(self, level=None):
 
-        client = MongoClient('10.58.0.189', 27017)
-        db = client.autohome
-
+        # client = MongoClient('10.58.0.189', 27017)
+        # db = client.autohome
 
         index_series_ids = db.new_series_id.find({"index":{"$exists": True}})
         for doc in index_series_ids:
             link = link = 'https://k.autohome.com.cn/' + str(doc['id']) + '/index_' + doc['index'] + '.html'
-            yield scrapy.Request(url=link, headers=self.headers, dont_filter=True, callback=self.parse_feedback_list, meta={'series_id': doc['id']})
-
-        series_ids = db.new_series_id.find({"index":{"$exists": False}})
-        for doc in series_ids:
-            link = link = 'https://k.autohome.com.cn/' + str(doc['id'])
             yield scrapy.Request(url=link, headers=self.headers, dont_filter=True, callback=self.parse_feedback_list, meta={'series_id': doc['id']})
 
 
@@ -67,7 +61,11 @@ class NewFeedbacksSpider(scrapy.Spider):
         for doc in failed_detail_ids:
             link = 'https://k.autohome.com.cn/detail/view_' + str(doc['id']) + '.html'
             yield scrapy.Request(url=link, headers=self.headers, dont_filter=True, callback=self.parse_feedback_page, errback=self.errback_httpbin, meta={'series_id': doc['series_id']})
-
+        
+        series_ids = db.new_series_id.find({"index":{"$exists": False}})
+        for doc in series_ids:
+            link = link = 'https://k.autohome.com.cn/' + str(doc['id'])
+            yield scrapy.Request(url=link, headers=self.headers, dont_filter=True, callback=self.parse_feedback_list, meta={'series_id': doc['id']})
 
 
     def parse_feedback_list(self, response):
@@ -93,10 +91,7 @@ class NewFeedbacksSpider(scrapy.Spider):
 
 
     def parse_feedback_page(self, response):
-        self.logger.info("Crawling feedback detail page: %s" % response.meta)
-        
         page_id = re.search(detail_page_regex, response.url).group(1)
-        db.new_failed_detail_pages.find_one_and_delete({'id': page_id})
 
         feedback = NewFeedback()
         feedback['page_id'] = page_id
@@ -115,8 +110,10 @@ class NewFeedbacksSpider(scrapy.Spider):
             if current_key.xpath("p/text()").extract_first():
                 keys = current_key.xpath("p/text()").extract()
                 values = current_value.xpath("p/text()").extract()
+                # TODO keys might be only have one element
                 basic_info.update({'单位' + keys[0].strip(): values[0]})
-                basic_info.update({keys[1].strip(): values[1]})
+                if len(keys) > 1:
+                    basic_info.update({keys[1].strip(): values[1]})
             else:
                 key = current_key.xpath("text()").extract_first().strip()
                 # chekc if it is a score item
@@ -141,6 +138,9 @@ class NewFeedbacksSpider(scrapy.Spider):
         for item in origin_content_list:
             content_list.append(decode(item, font))
         feedback['items'] = content_list
+
+        db.new_failed_detail_pages.find_one_and_delete({'id': page_id})
+
         yield feedback
 
     def errback_httpbin(self, failure):
@@ -150,6 +150,6 @@ class NewFeedbacksSpider(scrapy.Spider):
                 if re.search(detail_page_regex, response.url):
                     failed_detail_id = re.search(detail_page_regex, response.url).group(1)
                     # keep this detail page in db for later try
-                    db.new_failed_detail_pages.insert_one({'id': failed_detail_id, 'series_id': response.meta['series_id']})
+                    db.new_failed_detail_pages.replace_one({'id': failed_detail_id}, {'id': failed_detail_id, 'series_id': response.meta['series_id']}, upsert=True)
 
                     self.logger.info('Failed detail page request: %s' % failed_detail_id)

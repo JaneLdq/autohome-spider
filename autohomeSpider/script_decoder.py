@@ -42,6 +42,7 @@ def get_title_comment_js( content):
 
 # @staticmethod
 def get_add_comment_js( content):
+    # TODO if this [] item is empty, there is no <!--@athm_BASE64@-->
     start = re.search('<!--@athm_BASE64@-->', content).span()[1]
     end = re.search('<!--@athm_js@-->', content).span()[0]
     comment = content[start: end].decode("utf-8")

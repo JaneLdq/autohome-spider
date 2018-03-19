@@ -15,3 +15,15 @@ def distinct_articles():
 	        { "$out": "articles" }
 	    ]
 	)
+
+def distinct_detail():
+	db.new_failed_detail_pages.aggregate(
+	    [
+	        { "$group": {
+	            "_id": "$id",
+	            "doc": { "$first": "$$ROOT" }
+	        }},
+	        { "$replaceRoot": { "newRoot": "$doc" } },
+	        { "$out": "new_failed_detail_pages" }
+	    ]
+	)

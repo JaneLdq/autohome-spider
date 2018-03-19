@@ -110,7 +110,7 @@ ITEM_PIPELINES = {
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
 LOG_LEVEL = 'DEBUG'
-LOG_FILE = 'autohomeSpider.log'
+# LOG_FILE = 'autohomeSpider.log'
 
 MONGO_URI = '10.58.0.189:27017'
 # MONGO_URI = 'localhost:27017'
