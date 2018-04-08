@@ -3,7 +3,7 @@ from pymongo import MongoClient
 import ssl
 import json
 
-client = MongoClient('10.58.0.189', 27017)
+client = MongoClient('localhost', 27017)
 db = client.autohome
 
 url = 'https://k.autohome.com.cn/ajax/getSceneSelectCar?minprice=2&maxprice=110&_appid=koubei'

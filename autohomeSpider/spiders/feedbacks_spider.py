@@ -12,14 +12,13 @@ import scrapy
 import re
 import ssl
 
-client = MongoClient('10.58.0.189', 27017)
+client = MongoClient('localhost', 27017)
 db = client.autohome
 
-
 detail_page_regex = re.compile("//k.autohome.com.cn/detail/view_([\d\w]+).html")
-
 verify_page_regex = re.compile("http://safety.autohome.com.cn/userverify/")
 index_regex = re.compile("backurl=//k.autohome.com.cn/\d+/index_(\d+).html")
+tag_regexp = re.compile(r'(<[^>]*>)')
 
 class FeedbacksSpider(scrapy.Spider):
     name = "feedbacks"
@@ -46,30 +45,28 @@ class FeedbacksSpider(scrapy.Spider):
     }
 
     def start_requests(self, level=None):
-
-        index_series_ids = db.series_id.find({"index":{"$exists": True}})
+        index_series_ids = db.new_series_id.find({"index":{"$exists": True}})
         for doc in index_series_ids:
             link = link = 'https://k.autohome.com.cn/' + str(doc['id']) + '/index_' + doc['index'] + '.html'
             yield scrapy.Request(url=link, headers=self.headers, dont_filter=True, callback=self.parse_feedback_list, meta={'series_id': doc['id']})
 
-        series_ids = db.series_id.find({"index":{"$exists": False}})
-        for doc in series_ids:
-            link = link = 'https://k.autohome.com.cn/' + str(doc['id'])
-            yield scrapy.Request(url=link, headers=self.headers, dont_filter=True, callback=self.parse_feedback_list, meta={'series_id': doc['id']})
 
-
-        failed_detail_ids = db.failed_fb_detail_pages.find({})
+        failed_detail_ids = db.new_failed_detail_pages.find({})
         for doc in failed_detail_ids:
             link = 'https://k.autohome.com.cn/detail/view_' + str(doc['id']) + '.html'
             yield scrapy.Request(url=link, headers=self.headers, dont_filter=True, callback=self.parse_feedback_page, errback=self.errback_httpbin, meta={'series_id': doc['series_id']})
 
+        series_ids = db.new_series_id.find({"index":{"$exists": False}})
+        for doc in series_ids:
+            link = link = 'https://k.autohome.com.cn/' + str(doc['id'])
+            yield scrapy.Request(url=link, headers=self.headers, dont_filter=True, callback=self.parse_feedback_list, meta={'series_id': doc['id']})
 
 
     def parse_feedback_list(self, response):
         # if this crawled page is redirected to user verify page and get response 200
         if re.search(verify_page_regex, response.url):
             index = re.search(index_regex, response.url).group(1)
-            db.series_id.find_one_and_update({'id': response.meta['series_id']}, {'$set': {'index': index}})
+            db.new_series_id.find_one_and_update({'id': response.meta['series_id']}, {'$set': {'index': index}})
         else:
             self.logger.info("Crawling feedback of car series: %s" % response.meta['series_id'])
 
@@ -84,20 +81,44 @@ class FeedbacksSpider(scrapy.Spider):
                 yield response.follow(url=next_page, callback=self.parse_feedback_list, dont_filter=True, meta=response.meta)
             else:
                 # if successfully crawled the whole list page of one series, then delete the series id from db
-                db.series_id.find_one_and_delete({'id': response.meta['series_id']})
+                db.new_series_id.find_one_and_delete({'id': response.meta['series_id']})
 
 
     def parse_feedback_page(self, response):
-        self.logger.info("Crawling feedback detail page: %s" % response.meta)
-        
         page_id = re.search(detail_page_regex, response.url).group(1)
-        db.failed_fb_detail_pages.find_one_and_delete({'id': page_id})
 
         feedback = Feedback()
         feedback['page_id'] = page_id
         feedback['series_name'] = response.xpath("//div[@class='subnav-title-name']/a/text()").extract_first().strip()
         feedback['series_id'] = response.meta['series_id']
         feedback['purposes'] = response.xpath("//div[@class='mouthcon-cont-left']/div[@class='choose-con']//p[@class='obje']/text()").extract()
+
+        basic_info_keys = response.xpath("//div[@class='choose-con']/dl[@class='choose-dl']/dt")
+        basic_info_values = response.xpath("//div[@class='choose-con']/dl[@class='choose-dl']/dd")
+
+        basic_info = {}
+        for i in range(1, len(basic_info_keys)):
+            # check if it is fuel/mileage item
+            current_key = basic_info_keys[i]
+            current_value = basic_info_values[i]
+            if current_key.xpath("p/text()").extract_first():
+                keys = current_key.xpath("p/text()").extract()
+                values = current_value.xpath("p/text()").extract()
+                # TODO keys might be only have one element
+                basic_info.update({'单位' + keys[0].strip(): values[0]})
+                if len(keys) > 1:
+                    basic_info.update({keys[1].strip(): values[1]})
+            else:
+                key = current_key.xpath("text()").extract_first().strip()
+                # chekc if it is a score item
+                if current_value.xpath("span[@class='testfont']"):
+                    value = current_value.xpath("span[@class='testfont']/text()").extract_first().strip()
+                else:
+                    value = current_value.xpath("text()").extract_first().strip()
+                basic_info.update({key: value})
+
+        feedback['basic_info'] = basic_info
+
         feedback['title'] = response.xpath("//div[@class='mouth-main']//div[@class='kou-tit']/h3/text()").extract_first().strip()
 
         # get dynamic self-defined font
@@ -111,6 +132,9 @@ class FeedbacksSpider(scrapy.Spider):
         for item in origin_content_list:
             content_list.append(decode(item, font))
         feedback['items'] = content_list
+
+        db.new_failed_detail_pages.find_one_and_delete({'id': page_id})
+
         yield feedback
 
     def errback_httpbin(self, failure):
@@ -120,6 +144,6 @@ class FeedbacksSpider(scrapy.Spider):
                 if re.search(detail_page_regex, response.url):
                     failed_detail_id = re.search(detail_page_regex, response.url).group(1)
                     # keep this detail page in db for later try
-                    db.failed_fb_detail_pages.insert_one({'id': failed_detail_id, 'series_id': response.meta['series_id']})
+                    db.new_failed_detail_pages.replace_one({'id': failed_detail_id}, {'id': failed_detail_id, 'series_id': response.meta['series_id']}, upsert=True)
 
                     self.logger.info('Failed detail page request: %s' % failed_detail_id)

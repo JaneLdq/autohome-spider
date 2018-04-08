@@ -1,6 +1,6 @@
 from pymongo import MongoClient
 
-client = MongoClient('10.58.0.189', 27017)
+client = MongoClient('localhost', 27017)
 db = client.autohome
 
 def distinct_articles():

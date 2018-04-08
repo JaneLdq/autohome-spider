@@ -11,7 +11,7 @@ import random
 import base64
 from . import settings
 
-client = MongoClient('10.58.0.189', 27017)
+client = MongoClient('localhost', 27017)
 db = client.autohome
 
 

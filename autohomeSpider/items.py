@@ -17,18 +17,6 @@ class Feedback(scrapy.Item):
     series_id = scrapy.Field()
     # car series name
     series_name = scrapy.Field()
-    # a list of purposes of use
-    purposes = scrapy.Field()
-    title = scrapy.Field()
-    items = scrapy.Field()
-
-
-class NewFeedback(scrapy.Item):
-    # car series id
-    page_id = scrapy.Field()
-    series_id = scrapy.Field()
-    # car series name
-    series_name = scrapy.Field()
 
     # a list of purposes of use
     purposes = scrapy.Field()
@@ -37,4 +25,3 @@ class NewFeedback(scrapy.Item):
     # content
     title = scrapy.Field()
     items = scrapy.Field()
-    comments = scrapy.Field()
