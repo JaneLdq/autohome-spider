@@ -40,23 +40,22 @@ class FeedbacksSpider(scrapy.Spider):
     }
 
     meta_no_redirect = {
-         'dont_redirect': True,
          'handle_httpstatus_list': [302, 404]
     }
 
     def start_requests(self, level=None):
-        index_series_ids = db.new_series_id.find({"index":{"$exists": True}})
+        index_series_ids = db.series_id.find({"index":{"$exists": True}})
         for doc in index_series_ids:
             link = link = 'https://k.autohome.com.cn/' + str(doc['id']) + '/index_' + doc['index'] + '.html'
             yield scrapy.Request(url=link, headers=self.headers, dont_filter=True, callback=self.parse_feedback_list, meta={'series_id': doc['id']})
 
 
-        failed_detail_ids = db.new_failed_detail_pages.find({})
+        failed_detail_ids = db.failed_detail_pages.find({})
         for doc in failed_detail_ids:
             link = 'https://k.autohome.com.cn/detail/view_' + str(doc['id']) + '.html'
             yield scrapy.Request(url=link, headers=self.headers, dont_filter=True, callback=self.parse_feedback_page, errback=self.errback_httpbin, meta={'series_id': doc['series_id']})
 
-        series_ids = db.new_series_id.find({"index":{"$exists": False}})
+        series_ids = db.series_id.find({"index":{"$exists": False}})
         for doc in series_ids:
             link = link = 'https://k.autohome.com.cn/' + str(doc['id'])
             yield scrapy.Request(url=link, headers=self.headers, dont_filter=True, callback=self.parse_feedback_list, meta={'series_id': doc['id']})
@@ -66,7 +65,7 @@ class FeedbacksSpider(scrapy.Spider):
         # if this crawled page is redirected to user verify page and get response 200
         if re.search(verify_page_regex, response.url):
             index = re.search(index_regex, response.url).group(1)
-            db.new_series_id.find_one_and_update({'id': response.meta['series_id']}, {'$set': {'index': index}})
+            db.series_id.find_one_and_update({'id': response.meta['series_id']}, {'$set': {'index': index}})
         else:
             self.logger.info("Crawling feedback of car series: %s" % response.meta['series_id'])
 
@@ -81,7 +80,7 @@ class FeedbacksSpider(scrapy.Spider):
                 yield response.follow(url=next_page, callback=self.parse_feedback_list, dont_filter=True, meta=response.meta)
             else:
                 # if successfully crawled the whole list page of one series, then delete the series id from db
-                db.new_series_id.find_one_and_delete({'id': response.meta['series_id']})
+                db.series_id.find_one_and_delete({'id': response.meta['series_id']})
 
 
     def parse_feedback_page(self, response):
@@ -133,7 +132,7 @@ class FeedbacksSpider(scrapy.Spider):
             content_list.append(decode(item, font))
         feedback['items'] = content_list
 
-        db.new_failed_detail_pages.find_one_and_delete({'id': page_id})
+        db.failed_detail_pages.find_one_and_delete({'id': page_id})
 
         yield feedback
 
@@ -144,6 +143,6 @@ class FeedbacksSpider(scrapy.Spider):
                 if re.search(detail_page_regex, response.url):
                     failed_detail_id = re.search(detail_page_regex, response.url).group(1)
                     # keep this detail page in db for later try
-                    db.new_failed_detail_pages.replace_one({'id': failed_detail_id}, {'id': failed_detail_id, 'series_id': response.meta['series_id']}, upsert=True)
+                    db.failed_detail_pages.replace_one({'id': failed_detail_id}, {'id': failed_detail_id, 'series_id': response.meta['series_id']}, upsert=True)
 
                     self.logger.info('Failed detail page request: %s' % failed_detail_id)

@@ -11,4 +11,4 @@ car_list = json.load(urlopen(url, context=ssl._create_unverified_context()))['re
 
 series_ids = map(lambda c: {'id': c['SeriesId']}, car_list)
 
-db.new_series_id.insert_many(series_ids)
+db.series_id.insert_many(series_ids)
