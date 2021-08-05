@@ -37,4 +37,4 @@ scrapy crawl new_feedbacks
 ```
 
 ## Some notes of this project
-I wrote some notes and remaining problems of this project, you could find them here -> [一只爬虫的难产之旅（一）](http://liaodanqi.me/2018/04/08/autohome-spider-1/) :) 
+:pencil2: Some notes about this project, you could find them here -> [一只爬虫的难产之旅（一）](http://liaodanqi.xyz/blog/2018/04/08/autohome-spider-1/)
